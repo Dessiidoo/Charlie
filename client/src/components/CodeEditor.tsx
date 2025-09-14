@@ -111,7 +111,7 @@ export default function CodeEditor({
   };
 
   return (
-    <div className="w-96 flex flex-col bg-card" data-testid="code-editor">
+    <div className="w-full flex flex-col bg-card" data-testid="code-editor">
       <div className="p-4 border-b border-border">
         <div className="flex items-center justify-between">
           <h3 className="font-semibold text-foreground">Code Editor</h3>
