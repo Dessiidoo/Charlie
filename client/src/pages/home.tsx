@@ -234,7 +234,7 @@ export default function Home() {
         />
 
         {/* Main Content */}
-        <main className="flex-1 flex">
+        <main className="flex-1 flex flex-col lg:flex-row">
           {showFileUpload ? (
             <div className="flex-1 p-6">
               <div className="max-w-2xl mx-auto">
@@ -257,34 +257,38 @@ export default function Home() {
           ) : (
             <>
               {/* Chat Panel */}
-              <ChatInterface
-                conversationId={currentConversationId}
-                selectedModel={selectedModel}
-                onModelChange={setSelectedModel}
-                messages={chatMessages}
-                onSendMessage={handleSendMessage}
-                onCodeGenerated={handleCodeGenerated}
-                isLoading={sendMessageMutation.isPending || chatMutation.isPending}
-              />
+              <div className="w-full lg:w-1/2">
+                <ChatInterface
+                  conversationId={currentConversationId}
+                  selectedModel={selectedModel}
+                  onModelChange={setSelectedModel}
+                  messages={chatMessages}
+                  onSendMessage={handleSendMessage}
+                  onCodeGenerated={handleCodeGenerated}
+                  isLoading={sendMessageMutation.isPending || chatMutation.isPending}
+                />
+              </div>
 
               {/* Resize Handle */}
               <div className="w-1 bg-border hover:bg-primary transition-colors cursor-col-resize"></div>
 
               {/* Code Editor Panel */}
-              <CodeEditor
-                code={editorCode}
-                language={editorLanguage}
-                filename={editorFilename}
-                onChange={setEditorCode}
-                consoleOutput={consoleOutput}
-                onRun={() => {
-                  setConsoleOutput(prev => [
-                    ...prev,
-                    `✓ Code execution simulated`,
-                    `• File: ${editorFilename}`,
-                  ]);
-                }}
-              />
+              <div className="w-full lg:w-1/2">
+                <CodeEditor
+                  code={editorCode}
+                  language={editorLanguage}
+                  filename={editorFilename}
+                  onChange={setEditorCode}
+                  consoleOutput={consoleOutput}
+                  onRun={() => {
+                    setConsoleOutput(prev => [
+                      ...prev,
+                      `✓ Code execution simulated`,
+                      `• File: ${editorFilename}`,
+                    ]);
+                  }}
+                />
+              </div>
             </>
           )}
         </main>
