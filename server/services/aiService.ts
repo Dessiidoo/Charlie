@@ -79,7 +79,7 @@ export class AIService {
       let tokensUsed = 0;
 
       // Use Anthropic Claude
-codex/use-or-remove-lines-array-in-codeanalyzer
+
       const conversation = conversationHistory?.length ? [
         ...conversationHistory,
         { role: 'user', content: message }
