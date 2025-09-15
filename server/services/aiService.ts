@@ -77,41 +77,24 @@ export class AIService {
       let response: string;
       let tokensUsed = 0;
 
-      if (model.startsWith('gpt') || model === 'openai') {
-        const messages = [
-          ...(conversationHistory || []),
-          { role: 'user', content: message }
-        ];
+      // Use Anthropic Claude
+      const messages = conversationHistory?.length ? [
+        ...conversationHistory,
+        { role: 'user', content: message }
+      ] : [{ role: 'user', content: message }];
 
-        const completion = await openai.chat.completions.create({
-          model: DEFAULT_OPENAI_MODEL,
-          messages: messages as any,
-          temperature: 0.7,
-          max_tokens: 4000,
-        });
+      const completion = await anthropic.messages.create({
+        // "claude-sonnet-4-20250514"
+        model: model,
+        max_tokens: 4000,
+        messages: messages as any,
+        temperature: 0.7,
+      });
 
-        response = completion.choices[0]?.message?.content || 'No response generated';
-        tokensUsed = completion.usage?.total_tokens || 0;
-      } else {
-        // Use Anthropic Claude
-        const messages = conversationHistory?.length ? [
-          ...conversationHistory,
-          { role: 'user', content: message }
-        ] : [{ role: 'user', content: message }];
-
-        const completion = await anthropic.messages.create({
-          // "claude-sonnet-4-20250514"
-          model: DEFAULT_ANTHROPIC_MODEL,
-          max_tokens: 4000,
-          messages: messages as any,
-          temperature: 0.7,
-        });
-
-        response = completion.content[0]?.type === 'text' 
-          ? completion.content[0].text 
-          : 'No response generated';
-        tokensUsed = completion.usage?.input_tokens + completion.usage?.output_tokens || 0;
-      }
+      response = completion.content[0]?.type === 'text'
+        ? completion.content[0].text
+        : 'No response generated';
+      tokensUsed = completion.usage?.input_tokens + completion.usage?.output_tokens || 0;
 
       const responseTime = Date.now() - startTime;
 
@@ -142,7 +125,7 @@ Please provide a detailed analysis in JSON format with:
 
 Focus on practical, actionable feedback.`;
 
-    const response = await this.chat(prompt, 'gpt-5');
+    const response = await this.chat(prompt, DEFAULT_ANTHROPIC_MODEL);
     
     try {
       // Extract JSON from response
@@ -190,7 +173,7 @@ Please provide a JSON response with:
 
 Make the code production-ready, well-structured, and include proper error handling.`;
 
-    const response = await this.chat(prompt, 'gpt-5');
+    const response = await this.chat(prompt, DEFAULT_ANTHROPIC_MODEL);
     
     try {
       const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/) || 
@@ -216,19 +199,7 @@ Make the code production-ready, well-structured, and include proper error handli
   }
 
   private selectOptimalModel(message: string): string {
-    // Simple heuristics for model selection
-    const codeKeywords = ['function', 'class', 'import', 'const', 'let', 'var', 'def', 'public', 'private'];
-    const hasCode = codeKeywords.some(keyword => message.toLowerCase().includes(keyword));
-    
-    if (hasCode || message.includes('```')) {
-      return 'gpt-5'; // Better for code generation
-    }
-    
-    if (message.length > 1000) {
-      return DEFAULT_ANTHROPIC_MODEL; // Better for long-form content
-    }
-    
-    return 'gpt-5'; // Default to GPT-5
+    return DEFAULT_ANTHROPIC_MODEL;
   }
 }
 
