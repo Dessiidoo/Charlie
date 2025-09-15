@@ -39,8 +39,9 @@ Preferred communication style: Simple, everyday language.
 - **Authorization**: Session-based access control for API endpoints and WebSocket connections
 
 ## External Dependencies
-- **AI Services**: 
-  - Anthropic Claude API integration (Claude Sonnet 4 as default)
+ codex/remove-openai-package-and-references
+  - **AI Services**:
+    - Anthropic Claude API integration (Claude Sonnet 4 as default
 - **Database**: Neon PostgreSQL serverless database
 - **Development Tools**: 
   - Replit-specific development plugins for enhanced development experience

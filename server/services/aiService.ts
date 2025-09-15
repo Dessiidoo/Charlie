@@ -85,10 +85,9 @@ export class AIService {
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-        model: model,
-        max_tokens: 4000,
-        messages: messages as any,
-        temperature: 0.7,
+ codex/remove-openai-package-and-references
+        model: DEFAULT_ANTHROPIC_MODEL
+        
       });
 
       response = completion.content[0]?.type === 'text'
