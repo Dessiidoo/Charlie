@@ -100,7 +100,7 @@ export class AIService {
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-codex/use-or-remove-lines-array-in-codeanalyzer
+
         model,
         max_tokens: 1024,
         messages: apiMessages,
