@@ -66,7 +66,7 @@ export interface AppGenerationResponse {
 }
 
 export class AIService {
-  async chat(message: string, model: string = 'auto', conversationHistory?: Array<{role: string, content: string}>): Promise<AIResponse> {
+  async chat(message: string, model: string = 'auto', conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<AIResponse> {
     const startTime = Date.now();
     
     try {
@@ -79,10 +79,12 @@ export class AIService {
       let tokensUsed = 0;
 
       // Use Anthropic Claude
+codex/use-or-remove-lines-array-in-codeanalyzer
       const conversation = conversationHistory?.length ? [
         ...conversationHistory,
         { role: 'user', content: message }
       ] : [{ role: 'user', content: message }];
+
 
       const systemPrompt = conversation
         .filter(entry => entry.role === 'system')
@@ -98,10 +100,12 @@ export class AIService {
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
+codex/use-or-remove-lines-array-in-codeanalyzer
         model,
         max_tokens: 1024,
         messages: apiMessages,
         ...(systemPrompt ? { system: systemPrompt } : {}),
+
       });
 
       response = completion.content[0]?.type === 'text'
@@ -113,7 +117,7 @@ export class AIService {
 
       return {
         content: response,
-        model,
+        model: resolvedModel,
         tokensUsed,
         responseTime,
       };
