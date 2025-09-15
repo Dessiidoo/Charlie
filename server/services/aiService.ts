@@ -13,16 +13,6 @@ When copying code from this code snippet, ensure you also include this informati
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 // </important_do_not_delete>
 
-const apiKey = process.env.ANTHROPIC_API_KEY;
-
-if (!apiKey) {
-  throw new Error('Anthropic API key is not set. Please configure the ANTHROPIC_API_KEY environment variable.');
-}
-
-const anthropic = new Anthropic({
-  apiKey,
-});
-
 export interface AIResponse {
   content: string;
   model: string;
@@ -98,10 +88,41 @@ const extractStatus = (error: unknown): number | undefined => {
 };
 
 export class AIService {
+  private anthropicClient?: Anthropic;
+  private anthropicApiKey?: string;
+
+  private ensureApiKey(): string {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+
+    if (!apiKey) {
+      throw new AIServiceError(
+        'Anthropic API key is not set. Please configure the ANTHROPIC_API_KEY environment variable.',
+        500
+      );
+    }
+
+    return apiKey;
+  }
+
+  private getAnthropicClient(): Anthropic {
+    const apiKey = this.ensureApiKey();
+
+    if (!this.anthropicClient || this.anthropicApiKey !== apiKey) {
+      this.anthropicClient = new Anthropic({
+        apiKey,
+      });
+      this.anthropicApiKey = apiKey;
+    }
+
+    return this.anthropicClient;
+  }
+
   async chat(message: string, model: string = 'auto', conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<AIResponse> {
     const startTime = Date.now();
 
     try {
+      const anthropic = this.getAnthropicClient();
+
       if (model === 'auto') {
         // Auto-select model based on content type
         model = this.selectOptimalModel(message);
@@ -188,7 +209,9 @@ export class AIService {
 
   async analyzeCode(request: CodeAnalysisRequest): Promise<CodeAnalysisResponse> {
     const { code, language, analysisType = 'all' } = request;
-    
+
+    this.ensureApiKey();
+
     const prompt = `Analyze the following ${language} code for ${analysisType === 'all' ? 'all issues' : analysisType + ' issues'}:
 
 \`\`\`${language}
@@ -238,7 +261,9 @@ Focus on practical, actionable feedback.`;
 
   async generateApp(request: AppGenerationRequest): Promise<AppGenerationResponse> {
     const { description, framework = 'react', features = [] } = request;
-    
+
+    this.ensureApiKey();
+
     const prompt = `Generate a complete ${framework} application based on this description: "${description}"
     
 Additional features requested: ${features.join(', ')}
