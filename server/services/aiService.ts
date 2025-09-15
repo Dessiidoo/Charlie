@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { MessageParam } from '@anthropic-ai/sdk/resources/messages/messages';
 
 /*
 <important_code_snippet_instructions>
@@ -78,16 +79,30 @@ export class AIService {
       let tokensUsed = 0;
 
       // Use Anthropic Claude
-      const messages = conversationHistory?.length ? [
+      const conversation = conversationHistory?.length ? [
         ...conversationHistory,
         { role: 'user', content: message }
       ] : [{ role: 'user', content: message }];
 
+      const systemPrompt = conversation
+        .filter(entry => entry.role === 'system')
+        .map(entry => entry.content)
+        .join('\n\n');
+
+      const apiMessages: MessageParam[] = conversation
+        .filter(entry => entry.role !== 'system')
+        .map(entry => ({
+          role: entry.role === 'assistant' ? 'assistant' : 'user',
+          content: entry.content,
+        }));
+
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-        model: DEFAULT_ANTHROPIC_MODEL,}
-        
-      );
+        model,
+        max_tokens: 1024,
+        messages: apiMessages,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+      });
 
       response = completion.content[0]?.type === 'text'
         ? completion.content[0].text
