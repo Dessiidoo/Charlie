@@ -1,4 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk';
+import type { MessageParam } from '@anthropic-ai/sdk/resources/messages/messages';
 
 /*
 <important_code_snippet_instructions>
@@ -65,7 +66,7 @@ export interface AppGenerationResponse {
 }
 
 export class AIService {
-  async chat(message: string, model: string = 'auto', conversationHistory?: Array<{role: string, content: string}>): Promise<AIResponse> {
+  async chat(message: string, model: string = 'auto', conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<AIResponse> {
     const startTime = Date.now();
     
     try {
@@ -78,16 +79,24 @@ export class AIService {
       let tokensUsed = 0;
 
       // Use Anthropic Claude
-      const messages = conversationHistory?.length ? [
-        ...conversationHistory,
-        { role: 'user', content: message }
-      ] : [{ role: 'user', content: message }];
+      const history: MessageParam[] = (conversationHistory ?? []).map((entry) => ({
+        role: entry.role,
+        content: entry.content,
+      }));
+
+      const messages: MessageParam[] = [
+        ...history,
+        { role: 'user', content: message },
+      ];
+
+      const resolvedModel = model || DEFAULT_ANTHROPIC_MODEL;
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-        model: DEFAULT_ANTHROPIC_MODEL,}
-        
-      );
+        model: resolvedModel,
+        messages,
+        max_tokens: 1024,
+      });
 
       response = completion.content[0]?.type === 'text'
         ? completion.content[0].text
@@ -98,7 +107,7 @@ export class AIService {
 
       return {
         content: response,
-        model,
+        model: resolvedModel,
         tokensUsed,
         responseTime,
       };
