@@ -55,3 +55,4 @@ codex/update-replit.md-to-clarify-supported-model
   - Vite for frontend bundling and development server
   - ESBuild for backend compilation
   - PostCSS with Autoprefixer for CSS processing
+  - Configure the `ANTHROPIC_API_KEY` environment variable with a valid Claude API key before deploying or starting the server
