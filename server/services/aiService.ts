@@ -13,8 +13,14 @@ When copying code from this code snippet, ensure you also include this informati
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 // </important_do_not_delete>
 
+const apiKey = process.env.ANTHROPIC_API_KEY;
+
+if (!apiKey) {
+  throw new Error('Anthropic API key is not set. Please configure the ANTHROPIC_API_KEY environment variable.');
+}
+
 const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY_ENV_VAR || "default_key",
+  apiKey,
 });
 
 export interface AIResponse {
