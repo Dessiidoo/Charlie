@@ -77,41 +77,24 @@ export class AIService {
       let response: string;
       let tokensUsed = 0;
 
-      if (model.startsWith('gpt') || model === 'openai') {
-        const messages = [
-          ...(conversationHistory || []),
-          { role: 'user', content: message }
-        ];
+      // Use Anthropic Claude
+      const messages = conversationHistory?.length ? [
+        ...conversationHistory,
+        { role: 'user', content: message }
+      ] : [{ role: 'user', content: message }];
 
-        const completion = await openai.chat.completions.create({
-          model: DEFAULT_OPENAI_MODEL,
-          messages: messages as any,
-          temperature: 0.7,
-          max_tokens: 4000,
-        });
+      const completion = await anthropic.messages.create({
+        // "claude-sonnet-4-20250514"
+        model: DEFAULT_ANTHROPIC_MODEL,
+        max_tokens: 4000,
+        messages: messages as any,
+        temperature: 0.7,
+      });
 
-        response = completion.choices[0]?.message?.content || 'No response generated';
-        tokensUsed = completion.usage?.total_tokens || 0;
-      } else {
-        // Use Anthropic Claude
-        const messages = conversationHistory?.length ? [
-          ...conversationHistory,
-          { role: 'user', content: message }
-        ] : [{ role: 'user', content: message }];
-
-        const completion = await anthropic.messages.create({
-          // "claude-sonnet-4-20250514"
-          model: DEFAULT_ANTHROPIC_MODEL,
-          max_tokens: 4000,
-          messages: messages as any,
-          temperature: 0.7,
-        });
-
-        response = completion.content[0]?.type === 'text' 
-          ? completion.content[0].text 
-          : 'No response generated';
-        tokensUsed = completion.usage?.input_tokens + completion.usage?.output_tokens || 0;
-      }
+      response = completion.content[0]?.type === 'text'
+        ? completion.content[0].text
+        : 'No response generated';
+      tokensUsed = completion.usage?.input_tokens + completion.usage?.output_tokens || 0;
 
       const responseTime = Date.now() - startTime;
 
