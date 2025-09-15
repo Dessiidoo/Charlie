@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -63,15 +63,20 @@ export default function Home() {
 
   // Send message mutation
   const sendMessageMutation = useMutation({
-    mutationFn: async (data: { content: string; role: string }) => {
-      if (!currentConversationId) throw new Error('No conversation selected');
-      
-      const response = await apiRequest('POST', `/api/conversations/${currentConversationId}/messages`, data);
+    mutationFn: async (data: { content: string; role: string; conversationId?: string }) => {
+      const conversationId = data.conversationId ?? currentConversationId;
+      if (!conversationId) throw new Error('No conversation selected');
+
+      const response = await apiRequest('POST', `/api/conversations/${conversationId}/messages`, {
+        content: data.content,
+        role: data.role,
+      });
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        queryKey: ['/api/conversations', currentConversationId, 'messages'] 
+    onSuccess: (_data, variables) => {
+      const conversationId = variables.conversationId ?? currentConversationId;
+      queryClient.invalidateQueries({
+        queryKey: ['/api/conversations', conversationId, 'messages']
       });
     },
   });
@@ -111,15 +116,39 @@ export default function Home() {
 
   const handleNewChat = async () => {
     const title = `New Chat ${new Date().toLocaleTimeString()}`;
-    createConversationMutation.mutate({ title, model: selectedModel });
+    return await createConversationMutation.mutateAsync({ title, model: selectedModel });
   };
 
   const handleSendMessage = async (content: string) => {
-    if (!currentConversationId) {
-      await handleNewChat();
-      // Wait for conversation to be created
-      setTimeout(() => handleSendMessage(content), 100);
-      return;
+    let conversationId = currentConversationId;
+    if (!conversationId) {
+      const maxAttempts = 3;
+      for (let attempt = 0; attempt < maxAttempts && !conversationId; attempt++) {
+        try {
+          const newConversation = await handleNewChat();
+          conversationId = newConversation?.id;
+        } catch (error) {
+          if (attempt === maxAttempts - 1) {
+            toast({
+              variant: "destructive",
+              title: "Failed to start conversation",
+              description: error instanceof Error ? error.message : 'Unknown error occurred',
+            });
+            return;
+          }
+        }
+      }
+
+      if (!conversationId) {
+        toast({
+          variant: "destructive",
+          title: "Failed to start conversation",
+          description: 'Could not create a new conversation',
+        });
+        return;
+      }
+
+      setCurrentConversationId(conversationId);
     }
 
     try {
@@ -127,6 +156,7 @@ export default function Home() {
       await sendMessageMutation.mutateAsync({
         content,
         role: 'user',
+        conversationId,
       });
 
       // Get AI response
