@@ -85,7 +85,7 @@ export class AIService {
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-        model: DEFAULT_ANTHROPIC_MODEL]
+        model: DEFAULT_ANTHROPIC_MODEL,}
         
       );
 
