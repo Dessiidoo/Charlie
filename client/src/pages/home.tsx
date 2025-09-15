@@ -18,7 +18,7 @@ interface ChatMessage extends Omit<Message, 'createdAt'> {
 }
 
 export default function Home() {
-  const [selectedModel, setSelectedModel] = useState('gpt-5');
+  const [selectedModel, setSelectedModel] = useState('claude-sonnet-4-20250514');
   const [currentConversationId, setCurrentConversationId] = useState<string | undefined>();
   const [showFileUpload, setShowFileUpload] = useState(false);
   const [editorCode, setEditorCode] = useState('');
@@ -239,8 +239,6 @@ export default function Home() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="gpt-4">GPT-4</SelectItem>
-                <SelectItem value="gpt-5">GPT-5</SelectItem>
                 <SelectItem value="claude-sonnet-4-20250514">Claude-4</SelectItem>
                 <SelectItem value="auto">Auto-Select</SelectItem>
               </SelectContent>

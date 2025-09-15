@@ -1,6 +1,6 @@
 # Overview
 
-This is a full-stack AI-powered coding assistant and chat application built with React frontend and Express.js backend. The application provides real-time chat capabilities with AI models (GPT-5 and Claude Sonnet 4), code analysis tools, file upload functionality, and project management features. It's designed as an interactive development environment where users can chat with AI assistants, upload code files for analysis, and manage coding projects with real-time collaboration features.
+This is a full-stack AI-powered coding assistant and chat application built with React frontend and Express.js backend. The application provides real-time chat capabilities with the Claude Sonnet 4 AI model, code analysis tools, file upload functionality, and project management features. It's designed as an interactive development environment where users can chat with AI assistants, upload code files for analysis, and manage coding projects with real-time collaboration features.
 
 # User Preferences
 
@@ -39,8 +39,9 @@ Preferred communication style: Simple, everyday language.
 - **Authorization**: Session-based access control for API endpoints and WebSocket connections
 
 ## External Dependencies
+ codex/remove-openai-package-and-references
   - **AI Services**:
-    - Anthropic Claude API integration (Claude Sonnet 4 as default)
+    - Anthropic Claude API integration (Claude Sonnet 4 as default
 - **Database**: Neon PostgreSQL serverless database
 - **Development Tools**: 
   - Replit-specific development plugins for enhanced development experience

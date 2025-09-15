@@ -85,10 +85,9 @@ export class AIService {
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-        model: DEFAULT_ANTHROPIC_MODEL,
-        max_tokens: 4000,
-        messages: messages as any,
-        temperature: 0.7,
+ codex/remove-openai-package-and-references
+        model: DEFAULT_ANTHROPIC_MODEL
+        
       });
 
       response = completion.content[0]?.type === 'text'
@@ -125,7 +124,7 @@ Please provide a detailed analysis in JSON format with:
 
 Focus on practical, actionable feedback.`;
 
-    const response = await this.chat(prompt, 'gpt-5');
+    const response = await this.chat(prompt, DEFAULT_ANTHROPIC_MODEL);
     
     try {
       // Extract JSON from response
@@ -173,7 +172,7 @@ Please provide a JSON response with:
 
 Make the code production-ready, well-structured, and include proper error handling.`;
 
-    const response = await this.chat(prompt, 'gpt-5');
+    const response = await this.chat(prompt, DEFAULT_ANTHROPIC_MODEL);
     
     try {
       const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/) || 
@@ -199,19 +198,7 @@ Make the code production-ready, well-structured, and include proper error handli
   }
 
   private selectOptimalModel(message: string): string {
-    // Simple heuristics for model selection
-    const codeKeywords = ['function', 'class', 'import', 'const', 'let', 'var', 'def', 'public', 'private'];
-    const hasCode = codeKeywords.some(keyword => message.toLowerCase().includes(keyword));
-    
-    if (hasCode || message.includes('```')) {
-      return 'gpt-5'; // Better for code generation
-    }
-    
-    if (message.length > 1000) {
-      return DEFAULT_ANTHROPIC_MODEL; // Better for long-form content
-    }
-    
-    return 'gpt-5'; // Default to GPT-5
+    return DEFAULT_ANTHROPIC_MODEL;
   }
 }
 
