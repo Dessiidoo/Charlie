@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk';
+import Anthropic, { APIError as AnthropicAPIError, AuthenticationError as AnthropicAuthenticationError } from '@anthropic-ai/sdk';
 import type { MessageParam } from '@anthropic-ai/sdk/resources/messages/messages';
 
 /*
@@ -71,16 +71,43 @@ export interface AppGenerationResponse {
   dependencies?: string[];
 }
 
+export class AIServiceError extends Error {
+  status?: number;
+
+  constructor(message: string, status?: number) {
+    super(message);
+    this.name = 'AIServiceError';
+    this.status = status;
+  }
+}
+
+const isAnthropicAuthError = (error: unknown): error is AnthropicAuthenticationError =>
+  error instanceof AnthropicAuthenticationError ||
+  (error instanceof AnthropicAPIError && error.status === 401);
+
+const extractStatus = (error: unknown): number | undefined => {
+  if (typeof error === 'object' && error !== null && 'status' in error) {
+    const { status } = error as { status?: unknown };
+
+    if (typeof status === 'number') {
+      return status;
+    }
+  }
+
+  return undefined;
+};
+
 export class AIService {
   async chat(message: string, model: string = 'auto', conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<AIResponse> {
     const startTime = Date.now();
-    
+
     try {
       if (model === 'auto') {
         // Auto-select model based on content type
         model = this.selectOptimalModel(message);
       }
 
+      const resolvedModel = model;
       let response: string;
       let tokensUsed = 0;
 
@@ -104,15 +131,35 @@ export class AIService {
           content: entry.content,
         }));
 
-      const completion = await anthropic.messages.create({
-        // "claude-sonnet-4-20250514"
+      let completion;
 
-        model,
-        max_tokens: 1024,
-        messages: apiMessages,
-        ...(systemPrompt ? { system: systemPrompt } : {}),
+      try {
+        completion = await anthropic.messages.create({
+          // "claude-sonnet-4-20250514"
 
-      });
+          model: resolvedModel,
+          max_tokens: 1024,
+          messages: apiMessages,
+          ...(systemPrompt ? { system: systemPrompt } : {}),
+
+        });
+      } catch (error) {
+        if (isAnthropicAuthError(error)) {
+          throw new AIServiceError(
+            'Anthropic authentication failed. Please verify your API credentials.',
+            401
+          );
+        }
+
+        if (error instanceof AnthropicAPIError) {
+          throw new AIServiceError(`Anthropic API error: ${error.message}`, error.status);
+        }
+
+        const status = extractStatus(error);
+        const message = error instanceof Error ? error.message : 'Unknown error occurred';
+
+        throw new AIServiceError(`Anthropic request failed: ${message}`, status);
+      }
 
       response = completion.content[0]?.type === 'text'
         ? completion.content[0].text
@@ -128,7 +175,14 @@ export class AIService {
         responseTime,
       };
     } catch (error) {
-      throw new Error(`AI service error: ${error instanceof Error ? error.message : 'Unknown error occurred'}`);
+      if (error instanceof AIServiceError) {
+        throw error;
+      }
+
+      const status = extractStatus(error);
+      const message = error instanceof Error ? error.message : 'Unknown error occurred';
+
+      throw new AIServiceError(`AI service error: ${message}`, status);
     }
   }
 

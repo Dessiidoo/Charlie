@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { WebSocketServer, WebSocket } from "ws";
 import { storage } from "./storage";
-import { aiService } from "./services/aiService";
+import { aiService, AIServiceError } from "./services/aiService";
 import { codeAnalyzer } from "./services/codeAnalyzer";
 import { insertConversationSchema, insertMessageSchema, insertCodeProjectSchema } from "@shared/schema";
 import multer from "multer";
@@ -117,14 +117,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/chat', async (req, res) => {
     try {
       const { message, model = 'auto', history = [] } = req.body;
-      
+
       if (!message) {
         return res.status(400).json({ message: 'Message is required' });
       }
-      
+
       const response = await aiService.chat(message, model, history);
       res.json(response);
     } catch (error) {
+      if (error instanceof AIServiceError) {
+        return res.status(error.status ?? 500).json({ message: error.message });
+      }
+
       res.status(500).json({ message: error instanceof Error ? error.message : 'Unknown error occurred' });
     }
   });
@@ -137,10 +141,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!code || !language) {
         return res.status(400).json({ message: 'Code and language are required' });
       }
-      
+
       const analysis = await aiService.analyzeCode({ code, language, analysisType });
       res.json(analysis);
     } catch (error) {
+      if (error instanceof AIServiceError) {
+        return res.status(error.status ?? 500).json({ message: error.message });
+      }
+
       res.status(500).json({ message: error instanceof Error ? error.message : 'Unknown error occurred' });
     }
   });
@@ -153,10 +161,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!description) {
         return res.status(400).json({ message: 'Description is required' });
       }
-      
+
       const appGeneration = await aiService.generateApp({ description, framework, features });
       res.json(appGeneration);
     } catch (error) {
+      if (error instanceof AIServiceError) {
+        return res.status(error.status ?? 500).json({ message: error.message });
+      }
+
       res.status(500).json({ message: error instanceof Error ? error.message : 'Unknown error occurred' });
     }
   });
