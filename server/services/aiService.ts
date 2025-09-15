@@ -1,4 +1,7 @@
-import Anthropic, { APIError as AnthropicAPIError, AuthenticationError as AnthropicAuthenticationError } from '@anthropic-ai/sdk';
+import Anthropic, {
+  APIError as AnthropicAPIError,
+  AuthenticationError as AnthropicAuthenticationError,
+} from '@anthropic-ai/sdk';
 import type { MessageParam } from '@anthropic-ai/sdk/resources/messages/messages';
 
 /*
@@ -10,7 +13,7 @@ When copying code from this code snippet, ensure you also include this informati
 */
 
 // <important_do_not_delete>
-const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
+const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-20250514';
 // </important_do_not_delete>
 
 export interface AIResponse {
@@ -38,13 +41,9 @@ export const buildAnthropicMessages = (
           content: entry.content,
         });
       }
-
       return acc;
     },
-    {
-      apiMessages: [] as MessageParam[],
-      systemEntries: [] as string[],
-    },
+    { apiMessages: [] as MessageParam[], systemEntries: [] as string[] },
   );
 
   return {
@@ -96,11 +95,13 @@ export interface AppGenerationResponse {
 
 export class AIServiceError extends Error {
   status?: number;
-
-  constructor(message: string, status?: number) {
+  constructor(message: string, status?: number, cause?: unknown) {
     super(message);
     this.name = 'AIServiceError';
     this.status = status;
+    // Optional: attach cause for debugging
+    // @ts-ignore
+    if (cause) this.cause = cause;
   }
 }
 
@@ -111,123 +112,112 @@ const isAnthropicAuthError = (error: unknown): error is AnthropicAuthenticationE
 const extractStatus = (error: unknown): number | undefined => {
   if (typeof error === 'object' && error !== null && 'status' in error) {
     const { status } = error as { status?: unknown };
-
-    if (typeof status === 'number') {
-      return status;
-    }
+    if (typeof status === 'number') return status;
   }
-
   return undefined;
 };
 
 export class AIService {
-async chat(
-  message: string,
-  model: string = 'auto',
-  conversationHistory?: ConversationMessage[],
-): Promise<AIResponse> {
-  const startTime = Date.now();
+  private anthropicClient?: Anthropic;
 
-  try {
-    const anthropic = this.getAnthropicClient();
+  // --- helpers ---------------------------------------------------------------
 
-    if (model === 'auto') {
-      model = this.selectOptimalModel(message);
+  private ensureApiKey(): string {
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      throw new AIServiceError(
+        'Anthropic API key is not set. Please configure ANTHROPIC_API_KEY in your environment.',
+        500,
+      );
     }
-
-    // Add logic to send `conversationHistory` if needed
-    // and call anthropic client here.
-
-  } catch (error) {
-    throw new AIServiceError('Chat failed', 500, error);
+    return apiKey;
   }
-}
+
+  private getAnthropicClient(): Anthropic {
+    if (!this.anthropicClient) {
+      this.anthropicClient = new Anthropic({ apiKey: this.ensureApiKey() });
+    }
+    return this.anthropicClient;
+  }
+
+  private selectOptimalModel(_message: string): string {
+    // Keep simple for now; hook in heuristics later
+    return DEFAULT_ANTHROPIC_MODEL;
+  }
+
+  // --- primary API -----------------------------------------------------------
+
+  async chat(
+    message: string,
+    model: string = 'auto',
+    conversationHistory?: ConversationMessage[],
+  ): Promise<AIResponse> {
     const startTime = Date.now();
 
     try {
       const anthropic = this.getAnthropicClient();
 
       if (model === 'auto') {
-        // Auto-select model based on content type
         model = this.selectOptimalModel(message);
       }
 
       const resolvedModel = model;
-      let response: string;
-      let tokensUsed = 0;
 
-      // Use Anthropic Claude
-
+      // Prepare conversation
       const conversation: ConversationMessage[] = conversationHistory?.length
-        ? [
-            ...conversationHistory,
-            { role: 'user', content: message },
-          ]
+        ? [...conversationHistory, { role: 'user', content: message }]
         : [{ role: 'user', content: message }];
 
       const { apiMessages, systemPrompt } = buildAnthropicMessages(conversation);
 
-      let completion;
+      // Call Anthropic Claude
+      const completion = await anthropic.messages.create({
+        model: resolvedModel,
+        max_tokens: 1024,
+        messages: apiMessages,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+      });
 
-      try {
-        completion = await anthropic.messages.create({
-          // "claude-sonnet-4-20250514"
+      // Extract response & usage
+      const first = completion.content?.[0];
+      const text =
+        first && (first as any).type === 'text'
+          ? (first as any).text
+          : (typeof first === 'string' ? first : '') || 'No response generated';
 
-          model: resolvedModel,
-          max_tokens: 1024,
-          messages: apiMessages,
-          ...(systemPrompt ? { system: systemPrompt } : {}),
-
-        });
-      } catch (error) {
-        if (isAnthropicAuthError(error)) {
-          throw new AIServiceError(
-            'Anthropic authentication failed. Please verify your API credentials.',
-            401
-          );
-        }
-
-        if (error instanceof AnthropicAPIError) {
-          throw new AIServiceError(`Anthropic API error: ${error.message}`, error.status);
-        }
-
-        const status = extractStatus(error);
-        const message = error instanceof Error ? error.message : 'Unknown error occurred';
-
-        throw new AIServiceError(`Anthropic request failed: ${message}`, status);
-      }
-
-      response = completion.content[0]?.type === 'text'
-        ? completion.content[0].text
-        : 'No response generated';
-      tokensUsed = completion.usage?.input_tokens + completion.usage?.output_tokens || 0;
-
-      const responseTime = Date.now() - startTime;
+      const input = (completion as any).usage?.input_tokens ?? 0;
+      const output = (completion as any).usage?.output_tokens ?? 0;
 
       return {
-        content: response,
-        model,
-        tokensUsed,
-        responseTime,
+        content: text,
+        model: resolvedModel,
+        tokensUsed: input + output,
+        responseTime: Date.now() - startTime,
       };
     } catch (error) {
-      if (error instanceof AIServiceError) {
-        throw error;
+      if (isAnthropicAuthError(error)) {
+        throw new AIServiceError(
+          'Anthropic authentication failed. Please verify your API credentials.',
+          401,
+          error,
+        );
       }
-
+      if (error instanceof AnthropicAPIError) {
+        throw new AIServiceError(`Anthropic API error: ${error.message}`, error.status, error);
+      }
       const status = extractStatus(error);
-      const message = error instanceof Error ? error.message : 'Unknown error occurred';
-
-      throw new AIServiceError(`AI service error: ${message}`, status);
+      const msg = error instanceof Error ? error.message : 'Unknown error occurred';
+      throw new AIServiceError(`AI service error: ${msg}`, status, error);
     }
   }
 
   async analyzeCode(request: CodeAnalysisRequest): Promise<CodeAnalysisResponse> {
     const { code, language, analysisType = 'all' } = request;
-
     this.ensureApiKey();
 
-    const prompt = `Analyze the following ${language} code for ${analysisType === 'all' ? 'all issues' : analysisType + ' issues'}:
+    const prompt = `Analyze the following ${language} code for ${
+      analysisType === 'all' ? 'all issues' : analysisType + ' issues'
+    }:
 
 \`\`\`${language}
 ${code}
@@ -241,42 +231,26 @@ Please provide a detailed analysis in JSON format with:
 Focus on practical, actionable feedback.`;
 
     const response = await this.chat(prompt, DEFAULT_ANTHROPIC_MODEL);
-    
+
     try {
-      // Extract JSON from response
-      const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/) || 
-                       response.content.match(/\{[\s\S]*\}/);
-      
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      }
-      
-      // Fallback parsing
+      const jsonMatch =
+        response.content.match(/```json\n([\s\S]*?)\n```/) ||
+        response.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[1] || jsonMatch[0]);
       return JSON.parse(response.content);
-    } catch (error) {
-      // Fallback response structure
+    } catch {
       return {
-        issues: [{
-          type: 'info' as const,
-          message: 'Code analysis completed. See response for details.',
-        }],
-        suggestions: [{
-          category: 'General',
-          description: response.content,
-          priority: 'medium' as const,
-        }],
-        metrics: {
-          complexity: 50,
-          maintainability: 75,
-          performance: 70,
-        },
+        issues: [{ type: 'info', message: 'Code analysis completed. See response for details.' }],
+        suggestions: [
+          { category: 'General', description: response.content, priority: 'medium' },
+        ],
+        metrics: { complexity: 50, maintainability: 75, performance: 70 },
       };
     }
   }
 
   async generateApp(request: AppGenerationRequest): Promise<AppGenerationResponse> {
     const { description, framework = 'react', features = [] } = request;
-
     this.ensureApiKey();
 
     const prompt = `Generate a complete ${framework} application based on this description: "${description}"
@@ -291,32 +265,27 @@ Please provide a JSON response with:
 Make the code production-ready, well-structured, and include proper error handling.`;
 
     const response = await this.chat(prompt, DEFAULT_ANTHROPIC_MODEL);
-    
+
     try {
-      const jsonMatch = response.content.match(/```json\n([\s\S]*?)\n```/) || 
-                       response.content.match(/\{[\s\S]*\}/);
-      
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[1] || jsonMatch[0]);
-      }
-      
+      const jsonMatch =
+        response.content.match(/```json\n([\s\S]*?)\n```/) ||
+        response.content.match(/\{[\s\S]*\}/);
+      if (jsonMatch) return JSON.parse(jsonMatch[1] || jsonMatch[0]);
       return JSON.parse(response.content);
-    } catch (error) {
-      // Fallback response
+    } catch {
       return {
-        files: [{
-          path: 'App.js',
-          content: '// Generated application code would appear here\n// Please check the AI response for details',
-          language: 'javascript',
-        }],
+        files: [
+          {
+            path: 'App.js',
+            content:
+              '// Generated application code would appear here\n// Please check the AI response for details',
+            language: 'javascript',
+          },
+        ],
         instructions: response.content,
         dependencies: ['react', 'react-dom'],
       };
     }
-  }
-
-  private selectOptimalModel(message: string): string {
-    return DEFAULT_ANTHROPIC_MODEL;
   }
 }
 
