@@ -85,7 +85,6 @@ export class AIService {
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
- codex/remove-openai-package-and-references
         model: DEFAULT_ANTHROPIC_MODEL
         
       });
