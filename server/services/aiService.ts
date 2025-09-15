@@ -79,23 +79,33 @@ export class AIService {
       let tokensUsed = 0;
 
       // Use Anthropic Claude
-      const history: MessageParam[] = (conversationHistory ?? []).map((entry) => ({
-        role: entry.role,
-        content: entry.content,
-      }));
+codex/use-or-remove-lines-array-in-codeanalyzer
+      const conversation = conversationHistory?.length ? [
+        ...conversationHistory,
+        { role: 'user', content: message }
+      ] : [{ role: 'user', content: message }];
 
-      const messages: MessageParam[] = [
-        ...history,
-        { role: 'user', content: message },
-      ];
 
-      const resolvedModel = model || DEFAULT_ANTHROPIC_MODEL;
+      const systemPrompt = conversation
+        .filter(entry => entry.role === 'system')
+        .map(entry => entry.content)
+        .join('\n\n');
+
+      const apiMessages: MessageParam[] = conversation
+        .filter(entry => entry.role !== 'system')
+        .map(entry => ({
+          role: entry.role === 'assistant' ? 'assistant' : 'user',
+          content: entry.content,
+        }));
 
       const completion = await anthropic.messages.create({
         // "claude-sonnet-4-20250514"
-        model: resolvedModel,
-        messages,
+codex/use-or-remove-lines-array-in-codeanalyzer
+        model,
         max_tokens: 1024,
+        messages: apiMessages,
+        ...(systemPrompt ? { system: systemPrompt } : {}),
+
       });
 
       response = completion.content[0]?.type === 'text'

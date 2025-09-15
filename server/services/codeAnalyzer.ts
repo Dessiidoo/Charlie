@@ -40,8 +40,7 @@ export class CodeAnalyzer {
 
   private async analyzeFile(file: CodeFile): Promise<AnalysisResult> {
     const language = this.detectLanguage(file.path, file.content);
-    const lines = file.content.split('\n');
-    
+
     return {
       file: file.path,
       language,
