@@ -30,6 +30,39 @@ export interface AIResponse {
   responseTime: number;
 }
 
+export type ConversationMessage = {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+};
+
+export const buildAnthropicMessages = (
+  conversation: ConversationMessage[],
+): { apiMessages: MessageParam[]; systemPrompt: string } => {
+  const aggregated = conversation.reduce(
+    (acc, entry) => {
+      if (entry.role === 'system') {
+        acc.systemEntries.push(entry.content);
+      } else {
+        acc.apiMessages.push({
+          role: entry.role,
+          content: entry.content,
+        });
+      }
+
+      return acc;
+    },
+    {
+      apiMessages: [] as MessageParam[],
+      systemEntries: [] as string[],
+    },
+  );
+
+  return {
+    apiMessages: aggregated.apiMessages,
+    systemPrompt: aggregated.systemEntries.join('\n\n'),
+  };
+};
+
 export interface CodeAnalysisRequest {
   code: string;
   language: string;
@@ -98,7 +131,11 @@ const extractStatus = (error: unknown): number | undefined => {
 };
 
 export class AIService {
-  async chat(message: string, model: string = 'auto', conversationHistory?: Array<{ role: 'user' | 'assistant'; content: string }>): Promise<AIResponse> {
+  async chat(
+    message: string,
+    model: string = 'auto',
+    conversationHistory?: ConversationMessage[],
+  ): Promise<AIResponse> {
     const startTime = Date.now();
 
     try {
@@ -113,23 +150,14 @@ export class AIService {
 
       // Use Anthropic Claude
 
-      const conversation = conversationHistory?.length ? [
-        ...conversationHistory,
-        { role: 'user', content: message }
-      ] : [{ role: 'user', content: message }];
+      const conversation: ConversationMessage[] = conversationHistory?.length
+        ? [
+            ...conversationHistory,
+            { role: 'user', content: message },
+          ]
+        : [{ role: 'user', content: message }];
 
-
-      const systemPrompt = conversation
-        .filter(entry => entry.role === 'system')
-        .map(entry => entry.content)
-        .join('\n\n');
-
-      const apiMessages: MessageParam[] = conversation
-        .filter(entry => entry.role !== 'system')
-        .map(entry => ({
-          role: entry.role === 'assistant' ? 'assistant' : 'user',
-          content: entry.content,
-        }));
+      const { apiMessages, systemPrompt } = buildAnthropicMessages(conversation);
 
       let completion;
 
