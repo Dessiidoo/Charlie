@@ -13,9 +13,6 @@ When copying code from this code snippet, ensure you also include this informati
 const DEFAULT_ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 // </important_do_not_delete>
 
-
-});
-
 const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY || process.env.ANTHROPIC_API_KEY_ENV_VAR || "default_key",
 });
