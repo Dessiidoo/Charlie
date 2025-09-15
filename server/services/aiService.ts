@@ -117,7 +117,7 @@ export class AIService {
 
       return {
         content: response,
-        model: resolvedModel,
+        model,
         tokensUsed,
         responseTime,
       };
