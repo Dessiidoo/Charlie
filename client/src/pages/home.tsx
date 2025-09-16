@@ -30,9 +30,9 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   // Fetch conversations (mock user ID for now)
-  const { data: conversations = [] } = useQuery<Conversation[]>({
+  const { data: conversationsData = [] } = useQuery<Conversation[]>({
     queryKey: ['/api/conversations'],
-    queryFn: () => 
+    queryFn: () =>
       fetch('/api/conversations?userId=demo-user')
         .then(res => res.json()),
   });
@@ -208,6 +208,12 @@ export default function Home() {
       `• Lines: ${code.split('\n').length}`,
     ]);
   };
+
+  const conversations = conversationsData.map((conversation) => ({
+    ...conversation,
+    createdAt: new Date(conversation.createdAt),
+    updatedAt: new Date(conversation.updatedAt),
+  }));
 
   const chatMessages: ChatMessage[] = messages.map(m => ({
     ...m,
