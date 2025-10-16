@@ -5,7 +5,7 @@ A stunning, fully-functional AI companion interface built for Loretta Chapman. C
 ## Features
 
 ### 🧠 Persistent Memory
-- All conversations stored in localStora
+- All conversations stored in l
 - Survives browser refreshes and sessions
 - Export/import conversation history
 
