@@ -7,8 +7,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  frontend-deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -18,39 +19,20 @@ jobs:
         with:
           node-version: '20.x'
 
-      - name: Install frontend dependencies & build
+      - name: Build frontend
         working-directory: frontend
         run: |
           npm install
           npm run build
 
-      - name: Deploy frontend to Azure Web App
-        uses: azure/webapps-deploy@v3
-        with:
-          app-name: 'CHARLIE-FRONTEND'
-          slot-name: 'Production'
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE_FRONTEND }}
-          package: './frontend/dist'
-
-  backend-deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20.x'
-
       - name: Install backend dependencies
         working-directory: backend
         run: npm install
 
-      - name: Deploy backend to Azure Web App
+      - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v3
         with:
-          app-name: 'CHARLIE-BACKEND'
+          app-name: 'CHARLIE'  # replace with your Azure Web App name
           slot-name: 'Production'
-          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE_BACKEND }}
+          publish-profile: ${{ secrets.AZURE_PUBLISH_PROFILE }}
           package: './backend'
