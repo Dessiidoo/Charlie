@@ -13,7 +13,7 @@ A stunning, fully-functional AI companion interface built for Loretta Chapman. C
 - **Quick Mode**: Fast, concise responses
 - **Strategy Mode**: Deep strategic thinki
 - **Creative Mode**: Poetic, inventive solutions
-- **Technical Mode**: Engineering-focused assistance
+- **Technical Mode**: Engineering-focused assista
 
 ### 📊 Context Awareness
 - Tracks active projects (Jeosync, Echo AI, Flex)
@@ -27,7 +27,7 @@ A stunning, fully-functional AI companion interface built for Loretta Chapman. C
 - Responsive design
 
 ### ⚙️ Customization
-- Adjustable response style (concise, detailed, poetic)
+- Adjustable response style (concie, detailed, poetic)
 - Priority focus areas
 - Notification preferences
 - Full data export capability
