@@ -11,7 +11,7 @@ A stunning, fully-functional AI companion interface built for Loretta Chapman. C
 
 ### 💬 Multi-Mode Interaction
 - **Quick Mode**: Fast, concise responses
-- **Strategy Mode**: Deep strategic thinking
+- **Strategy Mode**: Deep strategic thinki
 - **Creative Mode**: Poetic, inventive solutions
 - **Technical Mode**: Engineering-focused assistance
 
